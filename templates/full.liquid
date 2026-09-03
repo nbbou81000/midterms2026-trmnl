@@ -1,0 +1,166 @@
+{% comment %}
+  Midterms 2026 US — template TRMNL (full layout, 800x480)
+
+  Écran affiché piloté par le champ de configuration TRMNL "ecran" :
+    ballot      -> generic ballot Démocrates vs Républicains (duel)
+    tendance    -> courbe de la moyenne glissante sur ~180 jours
+    instituts   -> dernier sondage de chaque institut (non-partisan)
+    approbation -> approbation/désapprobation de Trump (duel)
+
+  Source : SnoutCounter (Hackquantumcpp/snoutcounter-backend), moyennes
+  déjà calculées — pas de logique de recalcul en Liquid.
+{% endcomment %}
+
+{% assign ecran = trmnl.plugin_settings.custom_fields_values.ecran | default: "ballot" %}
+
+<style>
+  .mid { width:800px; height:480px; background:#fff; color:#000; font-family: Arial, sans-serif; overflow:hidden; border:2px solid #000; position:relative; }
+  .mid .header { padding: 16px 28px 6px 28px; text-align:center; }
+  .mid .title { font-size: 20px; font-weight:800; }
+  .mid .subtitle { font-size: 12px; font-weight:600; color:#333; margin-top:2px; }
+
+  .mid .duelrow { display:flex; align-items:center; padding: 18px 28px 10px 28px; }
+  .mid .cand { width: 230px; }
+  .mid .cand.right { text-align:right; }
+  .mid .cand .name { font-size:19px; font-weight:900; }
+  .mid .cand .sub { font-size:11px; color:#444; }
+  .mid .cand .pct { font-size: 34px; font-weight:900; }
+  .mid .gauge { flex:1; height: 34px; border:2.5px solid #000; margin: 0 16px; display:flex; overflow:hidden; }
+  .mid .g1 { background:#000; }
+  .mid .g2 { background:#ccc; }
+  .mid .g3 { background: repeating-linear-gradient(45deg, #fff 0 4px, #ddd 4px 8px); }
+  .mid .gaugelbl { text-align:center; font-size:11px; font-weight:600; color:#555; margin-top:6px; }
+  .mid .ecart { text-align:center; margin-top: 26px; }
+  .mid .ecart .val { font-size: 52px; font-weight:900; }
+  .mid .ecart .lbl { font-size: 13px; font-weight:700; color:#333; text-transform:uppercase; letter-spacing:1px; }
+  .mid .contexte { text-align:center; margin-top: 30px; font-size: 12px; color:#555; padding: 0 60px; line-height:1.5; }
+
+  .mid .liste { padding: 10px 28px 0 28px; }
+  .mid .carte { padding: 15px 0; border-bottom: 1.5px solid #ccc; display:flex; align-items:center; gap:14px; }
+  .mid .carte:last-child { border-bottom:none; }
+  .mid .inst-name { font-size:17px; font-weight:800; width:230px; flex-shrink:0; }
+  .mid .inst-date { font-size:11px; color:#555; font-weight:600; width:85px; flex-shrink:0; }
+  .mid .vals { font-size:14px; color:#222; font-weight:600; flex:1; text-align:right; }
+
+  .mid .footer { position:absolute; bottom:0; left:0; right:0; display:flex; justify-content:space-between; padding: 7px 28px; border-top: 2px solid #000; font-size: 10.5px; font-weight:600; color:#333; }
+</style>
+
+{% if ecran == "ballot" %}
+<div class="mid">
+  <div class="header">
+    <div class="title">MIDTERMS 2026 · Generic Ballot</div>
+    <div class="subtitle">
+      {% if resultats_ballot %}Résultat officiel du {{ resultats_ballot.date }}{% else %}Moyenne glissante au {{ ballot_actuel.date }} — J-{{ election.jours_avant }} avant le 3 novembre{% endif %}
+    </div>
+  </div>
+  {% assign b = resultats_ballot | default: ballot_actuel %}
+  <div class="duelrow">
+    <div class="cand">
+      <div class="name">Democrats</div>
+      <div class="sub">Generic congressional ballot</div>
+      <div class="pct">{{ b.dem | replace: ".", "," }}%</div>
+    </div>
+    <div class="gauge">
+      <div class="g1" style="width:{{ b.dem }}%"></div>
+      <div class="g2" style="width:{{ b.rep }}%"></div>
+      <div class="g3" style="width:{{ b.autres }}%"></div>
+    </div>
+    <div class="cand right">
+      <div class="name">Republicans</div>
+      <div class="sub">Generic congressional ballot</div>
+      <div class="pct">{{ b.rep | replace: ".", "," }}%</div>
+    </div>
+  </div>
+  <div class="gaugelbl">{{ b.autres | replace: ".", "," }}% indécis / autres partis</div>
+  <div class="ecart">
+    <div class="val">{{ b.net | abs | replace: ".", "," }} pts</div>
+    <div class="lbl">{% if b.net < 0 %}Avance Démocrate{% else %}Avance Républicaine{% endif %}</div>
+  </div>
+  <div class="contexte">Historiquement, une avance de 5+ points sur le generic ballot se traduit par un gain net significatif de sièges à la Chambre pour le parti en tête.</div>  <div class="footer">
+    <div>Source : SnoutCounter (snoutcounter.works)</div>
+    <div>{% if resultats_ballot %}Résultats officiels{% else %}Moyenne pondérée de tous les sondages publiés{% endif %}</div>
+  </div>
+</div>
+{% endif %}
+
+{% if ecran == "tendance" %}
+<div class="mid">
+  <div class="header" style="text-align:left;">
+    <div class="title">MIDTERMS 2026 · Tendance Generic Ballot</div>
+    <div class="subtitle">Moyenne glissante du {{ tendance_ballot.date_debut }} au {{ tendance_ballot.date_fin }}</div>
+  </div>
+  <div style="padding: 8px 30px 0 30px;">
+    <svg viewBox="0 0 {{ tendance_ballot.largeur }} {{ tendance_ballot.hauteur }}" width="740" height="330">
+      <polyline points="{{ tendance_ballot.dem.points }}" fill="none" stroke="#000" stroke-width="3.5" />
+      <polyline points="{{ tendance_ballot.rep.points }}" fill="none" stroke="#000" stroke-width="3" stroke-dasharray="10,6" />
+      <circle cx="{{ tendance_ballot.dem.derniere_x }}" cy="{{ tendance_ballot.dem.point_y }}" r="4.5" fill="#000" />
+      <circle cx="{{ tendance_ballot.rep.derniere_x }}" cy="{{ tendance_ballot.rep.point_y }}" r="4.5" fill="#000" />
+      <line x1="{{ tendance_ballot.dem.derniere_x }}" y1="{{ tendance_ballot.dem.point_y }}" x2="{{ tendance_ballot.dem.derniere_x | plus: 6 }}" y2="{{ tendance_ballot.dem.label_y }}" stroke="#999" stroke-width="1.5" />
+      <line x1="{{ tendance_ballot.rep.derniere_x }}" y1="{{ tendance_ballot.rep.point_y }}" x2="{{ tendance_ballot.rep.derniere_x | plus: 6 }}" y2="{{ tendance_ballot.rep.label_y }}" stroke="#999" stroke-width="1.5" />
+      <text x="{{ tendance_ballot.dem.derniere_x | plus: 10 }}" y="{{ tendance_ballot.dem.label_y | plus: 5 }}" font-size="16" font-weight="800">Democrats {{ tendance_ballot.dem.derniere_valeur | replace: ".", "," }}%</text>
+      <text x="{{ tendance_ballot.rep.derniere_x | plus: 10 }}" y="{{ tendance_ballot.rep.label_y | plus: 5 }}" font-size="16" font-weight="800">Republicans {{ tendance_ballot.rep.derniere_valeur | replace: ".", "," }}%</text>
+    </svg>
+  </div>
+  <div class="footer">
+    <div>Trait plein = Démocrates · Tirets = Républicains</div>
+    <div>Source : SnoutCounter — moyenne pondérée</div>
+  </div>
+</div>
+{% endif %}
+
+{% if ecran == "instituts" %}
+<div class="mid">
+  <div class="header" style="text-align:left;">
+    <div class="title">MIDTERMS 2026 · Comparatif instituts</div>
+    <div class="subtitle">Dernier sondage non-partisan de chaque institut — generic ballot</div>
+  </div>
+  <div class="liste">
+    {% for i in comparatif_instituts %}
+    <div class="carte">
+      <div class="inst-name">{{ i.institut }}</div>
+      <div class="inst-date">{{ i.date }}</div>
+      <div class="vals">Dem {{ i.dem | replace: ".", "," }}% · Rep {{ i.rep | replace: ".", "," }}%</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="footer">
+    <div>{{ comparatif_instituts.size }} instituts comparés · sondages partisans exclus</div>
+    <div>Source : SnoutCounter</div>
+  </div>
+</div>
+{% endif %}
+
+{% if ecran == "approbation" %}
+<div class="mid">
+  <div class="header">
+    <div class="title">MIDTERMS 2026 · Approbation de Trump</div>
+    <div class="subtitle">Moyenne glissante au {{ approbation_actuelle.date }}</div>
+  </div>
+  <div class="duelrow">
+    <div class="cand">
+      <div class="name">Approuve</div>
+      <div class="sub">Job approval</div>
+      <div class="pct">{{ approbation_actuelle.approuve | replace: ".", "," }}%</div>
+    </div>
+    <div class="gauge">
+      <div class="g1" style="width:{{ approbation_actuelle.approuve }}%"></div>
+      <div class="g2" style="width:{{ approbation_actuelle.desapprouve }}%"></div>
+      <div class="g3" style="width:{{ approbation_actuelle.sans_avis }}%"></div>
+    </div>
+    <div class="cand right">
+      <div class="name">Désapprouve</div>
+      <div class="sub">Job approval</div>
+      <div class="pct">{{ approbation_actuelle.desapprouve | replace: ".", "," }}%</div>
+    </div>
+  </div>
+  <div class="gaugelbl">{{ approbation_actuelle.sans_avis | replace: ".", "," }}% sans avis</div>
+  <div class="ecart">
+    <div class="val">{{ approbation_actuelle.net | abs | replace: ".", "," }} pts</div>
+    <div class="lbl">Net {% if approbation_actuelle.net < 0 %}négatif{% else %}positif{% endif %}</div>
+  </div>
+  <div class="contexte">Aucun président sous ~46% d'approbation n'a évité de pertes significatives de sièges à la Chambre lors d'un scrutin de mi-mandat.</div>  <div class="footer">
+    <div>Source : SnoutCounter (snoutcounter.works)</div>
+    <div>J-{{ election.jours_avant }} avant le 3 novembre 2026</div>
+  </div>
+</div>
+{% endif %}
