@@ -1,8 +1,8 @@
 {
-  "genere_le": "2026-10-30T20:57:41.530Z",
+  "genere_le": "2026-10-31T00:55:58.690Z",
   "election": {
     "jour_election": "2026-11-03",
-    "jours_avant": 4
+    "jours_avant": 3
   },
   "ballot_actuel": {
     "date": "2026-10-30",
