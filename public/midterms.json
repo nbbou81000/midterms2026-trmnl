@@ -1,8 +1,8 @@
 {
-  "genere_le": "2026-11-12T20:59:15.672Z",
+  "genere_le": "2026-11-13T02:00:08.012Z",
   "election": {
     "jour_election": "2026-11-03",
-    "jours_avant": -9
+    "jours_avant": -10
   },
   "ballot_actuel": {
     "date": "2026-11-02",
@@ -72,10 +72,10 @@
     }
   ],
   "approbation_actuelle": {
-    "date": "2026-11-10",
-    "approuve": 35.8,
-    "desapprouve": 59.6,
-    "net": -23.8,
+    "date": "2026-11-12",
+    "approuve": 35.4,
+    "desapprouve": 60,
+    "net": -24.6,
     "sans_avis": 4.6
   },
   "resultats_ballot": null
